@@ -1,95 +1,129 @@
 // TaskList.tsx
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useSocket } from '../hooks/useSocket';
-import { Task } from '../types/task';
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;;
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useSocket } from "../hooks/useSocket";
+import { Task } from "../types/task";
+import { FaTrash } from "react-icons/fa";
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 if (!BACKEND_URL) {
-    console.error("Backend URL is not defined in environment variables!");
+  console.error("Backend URL is not defined in environment variables!");
 }
 
 const API_URL = `${BACKEND_URL}/tasks`;
 
 const TaskList: React.FC = () => {
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [newTask, setNewTask] = useState<string>('');
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTask, setNewTask] = useState<string>("");
 
-    const fetchTasks = async () => {
-        const response = await axios.get<Task[]>(API_URL);
-        setTasks(response.data);
-    };
+  const fetchTasks = async () => {
+    const response = await axios.get<Task[]>(API_URL);
+    setTasks(response.data);
+  };
 
-    const addTask = async () => {
-        if (!newTask.trim()) return;
-        const response = await axios.post<Task>(API_URL, { task: newTask });
-        setNewTask('');
-        setTasks((prev) => [...prev, response.data]);
-    };
+  const addTask = async () => {
+    if (!newTask.trim()) return;
+    const response = await axios.post<Task>(API_URL, { task: newTask });
+    setNewTask("");
+    setTasks((prev) => [...prev, response.data]);
+  };
 
-    const toggleTask = async (task: Task) => {
-        const updatedTask = { ...task, completed: !task.completed };
-        await axios.patch(`${API_URL}/${task._id}`, updatedTask);
-    };
+  const toggleTask = async (task: Task) => {
+    const updatedTask = { ...task, completed: !task.completed };
+    await axios.patch(`${API_URL}/${task._id}`, updatedTask);
+  };
 
-    // Handle real-time updates
-    useSocket('taskAdded', (task: Task) => setTasks((prev) => [...prev, task]));
-    useSocket('taskUpdated', (updatedTask: Task) => {
-        setTasks((prev) =>
-            prev.map((task) => (task._id === updatedTask._id ? updatedTask : task))
-        );
-    });
+  const deleteTask = async (taskId: string) => {
+    try {
+      await axios.delete(`${API_URL}/${taskId}`);
+      setTasks((prev) => prev.filter((task) => task._id !== taskId)); // Remove from state
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
+  };
 
-    useEffect(() => {
-        fetchTasks();
-    }, []);
-
-    return (
-        <div className="max-w-lg mx-auto mt-10 p-4 bg-gray-100 rounded shadow">
-            <h1 className="text-xl font-bold text-center mb-4">To-Do List</h1>
-            <div className="flex gap-2 mb-4">
-                <input
-                    type="text"
-                    value={newTask}
-                    onChange={(e) => setNewTask(e.target.value)}
-                    placeholder="Add a task"
-                    className="flex-grow p-2 border border-gray-300 rounded"
-                />
-                <button
-                    onClick={addTask}
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                >
-                    Add
-                </button>
-            </div>
-            <ul>
-                {tasks.map((task) => (
-                    <li
-                        key={task._id}
-                        className={`p-2 flex justify-between items-center rounded mb-2 ${
-                            task.completed ? 'bg-green-200' : 'bg-gray-200'
-                        }`}
-                    >
-                        <span
-                            className={`cursor-pointer ${
-                                task.completed ? 'line-through' : ''
-                            }`}
-                            onClick={() => toggleTask(task)}
-                        >
-                            {task.task}
-                        </span>
-                        <span
-                            className={`text-sm ${
-                                task.completed ? 'text-green-600' : 'text-red-600'
-                            }`}
-                        >
-                            {task.completed ? 'Completed' : 'Pending'}
-                        </span>
-                    </li>
-                ))}
-            </ul>
-        </div>
+  // Handle real-time updates
+//   useSocket("taskAdded", (task: Task) => {
+//     setTasks((prev) => {
+//       if (prev.some(existingTask => existingTask._id === task._id)) {
+//         return prev; // Task already exists, do not add again
+//       }
+//       return [...prev, task]; // Add new task if it doesn't exist
+//     });
+//   });
+  useSocket("taskUpdated", (updatedTask: Task) => {
+    setTasks((prev) =>
+      prev.map((task) => (task._id === updatedTask._id ? updatedTask : task))
     );
+  });
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  return (
+    <div className="max-w-lg mx-auto mt-10 p-4 bg-gray-100 rounded shadow">
+      <h1 className="text-xl font-bold text-center mb-4">To-Do List</h1>
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          id="add-task-field"
+          name="add-task-field"
+          value={newTask}
+          onChange={(e) => setNewTask(e.target.value)}
+          placeholder="Add a task"
+          className="flex-grow p-2 border border-gray-300 rounded"
+        />
+        <button
+          onClick={addTask}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          Add
+        </button>
+      </div>
+      <ul>
+        {tasks.map((task) => (
+          <li
+            key={task._id}
+            className={`p-2 flex justify-between gap-5 items-center rounded mb-2 ${
+              task.completed ? "bg-green-200" : "bg-gray-200"
+            }`}
+          >
+            <input
+              type="checkbox"
+              id={`${task._id}-checkbox`}
+              name={`${task._id}-checkbox`}
+              checked={task.completed}
+              onChange={() => toggleTask(task)}
+              className="peer hidden"
+            />
+             <label
+                title={`${task.completed? "Mark as incomplete": "Mark as completed"}`}
+                htmlFor={`${task._id}-checkbox`}
+                className="cursor-pointer min-w-5 min-h-5 max-w-5 max-h-5 border-2 border-gray-400 rounded-sm peer-checked:bg-green-500 peer-checked:border-green-500 text-center flex justify-center items-center"
+            >
+                {task.completed? "✓":""}
+            </label>
+            <span
+              className={`flex-grow ${task.completed ? "line-through" : ""}`}
+            >
+              {task.task}
+            </span>
+            <span
+              className={`text-sm min-w-[70px] ${
+                task.completed ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {task.completed ? "Completed" : "Pending"}
+            </span>
+            <span title="Remove Task">
+            <FaTrash className="cursor-pointer"  onClick={() => deleteTask(task._id)}/>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 };
 
 export default TaskList;

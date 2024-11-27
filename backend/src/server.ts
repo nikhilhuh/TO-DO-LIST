@@ -78,6 +78,16 @@ app.patch('/tasks/:id', async (req: Request, res: Response): Promise<void> => {
     }
 });
 
+app.delete("/tasks/:id", async(req: Request , res: Response): Promise<void>=>{
+    try{
+        const {id} = req.params;
+        await Task.findByIdAndDelete(id);
+        res.status(200).send({message: "Task deleted successfully!"})
+    } catch (err) {
+        res.status(400).json({error: "Failed to delte task"})
+    }
+})
+
 // Socket.IO
 io.on('connection', (socket) => {
     console.log('A user connected');
