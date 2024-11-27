@@ -25,7 +25,13 @@ const TaskList: React.FC = () => {
     if (!newTask.trim()) return;
     const response = await axios.post<Task>(API_URL, { task: newTask });
     setNewTask("");
-    setTasks((prev) => [...prev, response.data]);
+    setTasks((prev) => {
+      // Check if the task already exists in the list
+      if (prev.some(existingTask => existingTask._id === response.data._id)) {
+        return prev; // Do not add the task if it already exists
+      }
+      return [...prev, response.data];
+    });
   };
 
   const toggleTask = async (task: Task) => {
@@ -86,7 +92,7 @@ const TaskList: React.FC = () => {
           }}
         />
         <button
-          onClick={()=> addTask()}
+          onClick={addTask}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           Add
