@@ -81,7 +81,12 @@ app.patch('/tasks/:id', async (req: Request, res: Response): Promise<void> => {
 app.delete("/tasks/:id", async(req: Request , res: Response): Promise<void>=>{
     try{
         const {id} = req.params;
-        await Task.findByIdAndDelete(id);
+        const deletedTask = await Task.findByIdAndDelete(id);
+        if (!deletedTask) {
+            res.status(404).json({ error: "Task not found" });
+            return;
+          }
+          io.emit("taskDeleted",deletedTask)
         res.status(200).send({message: "Task deleted successfully!"})
     } catch (err) {
         res.status(400).json({error: "Failed to delte task"})

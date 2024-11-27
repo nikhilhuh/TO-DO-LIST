@@ -79,9 +79,14 @@ const TaskList: React.FC = () => {
           onChange={(e) => setNewTask(e.target.value)}
           placeholder="Add a task"
           className="flex-grow p-2 border border-gray-300 rounded"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { // Check if the Enter key is pressed
+              addTask(); // Call the addTask function
+            }
+          }}
         />
         <button
-          onClick={addTask}
+          onClick={()=> addTask()}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           Add
