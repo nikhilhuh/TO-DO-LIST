@@ -22,7 +22,7 @@ const App: React.FC = () => {
   });
 
 
-  const handleDragStop = (e: any, data: any) => {
+  const handleDragStop = (data: any) => {
     const newPos = { x: data.x, y: data.y };
     setPosition(newPos);
     localStorage.setItem("taskListPosition", JSON.stringify(newPos));
