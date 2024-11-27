@@ -43,19 +43,25 @@ const TaskList: React.FC = () => {
   };
 
   // Handle real-time updates
-//   useSocket("taskAdded", (task: Task) => {
-//     setTasks((prev) => {
-//       if (prev.some(existingTask => existingTask._id === task._id)) {
-//         return prev; // Task already exists, do not add again
-//       }
-//       return [...prev, task]; // Add new task if it doesn't exist
-//     });
-//   });
+  useSocket("taskAdded", (task: Task) => {
+    setTasks((prev) => {
+      if (prev.some(existingTask => existingTask._id === task._id)) {
+        return prev; // Task already exists, do not add again
+      }
+      return [...prev, task]; // Add new task if it doesn't exist
+    });
+  });
+  
   useSocket("taskUpdated", (updatedTask: Task) => {
     setTasks((prev) =>
       prev.map((task) => (task._id === updatedTask._id ? updatedTask : task))
     );
   });
+  
+  useSocket("taskDeleted", (deletedTask: Task) => {
+    setTasks((prev) => prev.filter((task) => task._id !== deletedTask._id)); // Corrected: use deletedTask
+  });
+  
 
   useEffect(() => {
     fetchTasks();
