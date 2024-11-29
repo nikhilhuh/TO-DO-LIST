@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSocket, socket } from "../hooks/useSocket";
 import { FaTrash } from "react-icons/fa";
-import  EmojiPicker  from "emoji-picker-react";
+import EmojiPicker from "emoji-picker-react";
 import { EmojiClickData } from "emoji-picker-react";
 
 interface ChatMessage {
@@ -21,7 +21,7 @@ const Chat: React.FC<ChatProps> = ({ Height, Width }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  
+
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const currentUser = "Logged-in User"; // Replace with dynamic user data
 
@@ -33,6 +33,9 @@ const Chat: React.FC<ChatProps> = ({ Height, Width }) => {
   useSocket("newMessage", (message: ChatMessage) => {
     setMessages((prev) => [...prev, message]);
   });
+  useSocket("messageDeleted", (timestamp: string) => {
+    setMessages((prevMessages) => prevMessages.filter((msg) => msg.timestamp !== timestamp));
+});
 
   // Typing event handlers
   useSocket("userTyping", (user: string) => {
@@ -52,7 +55,7 @@ const Chat: React.FC<ChatProps> = ({ Height, Width }) => {
     setTimeout(() => {
       setIsTyping(false);
       socket.emit("stopTyping", { user: currentUser });
-    }, 1000); // Adjust delay as needed
+    }, 1500); 
   };
 
   const sendMessage = () => {
@@ -74,14 +77,15 @@ const Chat: React.FC<ChatProps> = ({ Height, Width }) => {
   // Scroll to the bottom when new messages arrive
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) { 
-      e.preventDefault();  
-      sendMessage();      
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
@@ -105,14 +109,22 @@ const Chat: React.FC<ChatProps> = ({ Height, Width }) => {
           return (
             <div
               key={index}
-              className={`flex ${isCurrentUser ? "flex-row-reverse" : ""} mb-4 gap-2 items-baseline`}
+              className={`flex ${
+                isCurrentUser ? "flex-row-reverse" : ""
+              } mb-4 gap-2 items-baseline`}
             >
-              <span className={`text-blue-600 text-sm ${isCurrentUser ? "font-bold" : ""}`}>
+              <span
+                className={`text-blue-600 text-sm ${
+                  isCurrentUser ? "font-bold" : ""
+                }`}
+              >
                 {isCurrentUser ? "You" : msg.user}
               </span>
               <span
                 className={`font-bold text-black py-2 px-4 rounded-lg ${
-                  isCurrentUser ? "rounded-br-none bg-green-400" : "rounded-bl-none bg-yellow-100"
+                  isCurrentUser
+                    ? "rounded-br-none bg-green-400"
+                    : "rounded-bl-none bg-yellow-100"
                 }`}
               >
                 {msg.text}
@@ -130,11 +142,14 @@ const Chat: React.FC<ChatProps> = ({ Height, Width }) => {
             </div>
           );
         })}
-      </div>
-
-      {/* Typing indicator */}
-      <div className="p-2 text-gray-500 text-sm">
-        {typingUsers.length > 0 && `${typingUsers.join(", ")} ${typingUsers.length > 1 ? "are" : "is"} typing...`}
+        {/* Show typing indicator if someone is typing */}
+        {typingUsers.length > 0 && (
+          <div className="flex mb-4 gap-2 items-baseline text-gray-500 text-sm">
+            {typingUsers.length > 1
+              ? `${typingUsers.join(", ")} are typing...`
+              : `${typingUsers[0]} is typing...`}
+          </div>
+        )}
       </div>
 
       {/* Input box */}
@@ -159,7 +174,9 @@ const Chat: React.FC<ChatProps> = ({ Height, Width }) => {
             }}
           >
             <EmojiPicker
-              onEmojiClick={(emoji: EmojiClickData) => setInput(input + emoji.emoji)}
+              onEmojiClick={(emoji: EmojiClickData) =>
+                setInput(input + emoji.emoji)
+              }
             />
           </div>
         )}
