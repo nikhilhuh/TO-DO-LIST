@@ -103,17 +103,66 @@ app.patch('/tasks/:id', (req, res) => __awaiter(void 0, void 0, void 0, function
 app.delete("/tasks/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        yield Task.findByIdAndDelete(id);
+        const deletedTask = yield Task.findByIdAndDelete(id);
+        if (!deletedTask) {
+            res.status(404).json({ error: "Task not found" });
+            return;
+        }
+        io.emit("taskDeleted", deletedTask);
         res.status(200).send({ message: "Task deleted successfully!" });
     }
     catch (err) {
         res.status(400).json({ error: "Failed to delte task" });
     }
 }));
-// Socket.IO
-io.on('connection', (socket) => {
-    console.log('A user connected');
-    socket.on('disconnect', () => console.log('A user disconnected'));
+const ChatMessageSchema = new mongoose_1.Schema({
+    user: { type: String, required: true },
+    text: { type: String, required: true },
+    timestamp: { type: String, required: true },
 });
+const ChatMessage = mongoose_1.default.model('ChatMessage', ChatMessageSchema);
+// Socket.IO
+io.on('connection', (socket) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('A user connected');
+    try {
+        // Fetch all chat messages from MongoDB and send them to the client
+        const chatLog = yield ChatMessage.find().sort({ timestamp: 1 });
+        socket.emit('chatLog', chatLog);
+    }
+    catch (err) {
+        console.error('Error fetching chat log:', err);
+    }
+    // Listen for new messages
+    socket.on('sendMessage', (message) => __awaiter(void 0, void 0, void 0, function* () {
+        const chatMessage = new ChatMessage(Object.assign(Object.assign({}, message), { timestamp: new Date().toISOString() }));
+        try {
+            yield chatMessage.save(); // Save to MongoDB
+            io.emit('newMessage', chatMessage); // Broadcast to all clients
+        }
+        catch (err) {
+            console.error('Error saving message:', err);
+        }
+    }));
+    socket.on('typing', ({ user }) => {
+        socket.broadcast.emit('userTyping', user); // Notify other users
+    });
+    socket.on('stopTyping', ({ user }) => {
+        socket.broadcast.emit('userStoppedTyping', user); // Notify other users
+    });
+    // Listen for delete message event
+    socket.on('deleteMessage', (_a) => __awaiter(void 0, [_a], void 0, function* ({ timestamp }) {
+        try {
+            // Delete the message from MongoDB
+            const deletedMessage = yield ChatMessage.findOneAndDelete({ timestamp });
+            if (deletedMessage) {
+                io.emit('messageDeleted', timestamp); // Notify all clients
+            }
+        }
+        catch (err) {
+            console.error('Error deleting message:', err);
+        }
+    }));
+    socket.on('disconnect', () => console.log('A user disconnected'));
+}));
 // Start the server
 server.listen(3000, () => console.log('Server running on port 3000'));

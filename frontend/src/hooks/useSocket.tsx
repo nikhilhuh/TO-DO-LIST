@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL: string = import.meta.env.VITE_BACKEND_URL;; // Update with your backend URL if deployed
+const SOCKET_URL: string = import.meta.env.VITE_BACKEND_URL;; 
 export const socket: Socket = io(SOCKET_URL);
 
 export const useSocket = (event: string, handler: (...args: any[]) => void) => {

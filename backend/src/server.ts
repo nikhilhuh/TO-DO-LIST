@@ -93,11 +93,71 @@ app.delete("/tasks/:id", async(req: Request , res: Response): Promise<void>=>{
     }
 })
 
+interface IChatMessage extends Document {
+    user: string;
+    text: string;
+    timestamp: string;
+}
+
+const ChatMessageSchema = new Schema<IChatMessage>({
+    user: { type: String, required: true },
+    text: { type: String, required: true },
+    timestamp: { type: String, required: true },
+});
+
+const ChatMessage = mongoose.model<IChatMessage>('ChatMessage', ChatMessageSchema);
+
+
 // Socket.IO
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
     console.log('A user connected');
+
+    try {
+        // Fetch all chat messages from MongoDB and send them to the client
+        const chatLog = await ChatMessage.find().sort({ timestamp: 1 });
+        socket.emit('chatLog', chatLog);
+    } catch (err) {
+        console.error('Error fetching chat log:', err);
+    }
+
+    // Listen for new messages
+    socket.on('sendMessage', async (message: Omit<IChatMessage, 'timestamp'>) => {
+        const chatMessage = new ChatMessage({
+            ...message,
+            timestamp: new Date().toISOString(),
+        });
+
+        try {
+            await chatMessage.save(); // Save to MongoDB
+            io.emit('newMessage', chatMessage); // Broadcast to all clients
+        } catch (err) {
+            console.error('Error saving message:', err);
+        }
+    });
+
+    socket.on('typing', ({ user }) => {
+        socket.broadcast.emit('userTyping', user); 
+    });
+
+    socket.on('stopTyping', ({ user }) => {
+        socket.broadcast.emit('userStoppedTyping', user); 
+    });
+
+    socket.on('deleteMessage', async ({ timestamp }) => {
+        try {
+            // Delete the message from MongoDB
+            const deletedMessage = await ChatMessage.findOneAndDelete({ timestamp });
+            if (deletedMessage) {
+                io.emit('messageDeleted', timestamp); 
+            }
+        } catch (err) {
+            console.error('Error deleting message:', err);
+        }
+    });
+
     socket.on('disconnect', () => console.log('A user disconnected'));
 });
+
 
 // Start the server
 server.listen(3000, () => console.log('Server running on port 3000'));
